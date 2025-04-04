@@ -1,0 +1,436 @@
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+//   PDFViewer,
+//   PDFDownloadLink,
+  Image,
+} from "@react-pdf/renderer";
+import { gettimezonebasedDate } from "../../../Home/Components/Sidebar/Sidebar";
+const styles = StyleSheet.create({
+  page: {
+    padding: 40, // Consistent padding on all sides
+    fontSize: 10, // Default font size for readability
+    fontFamily: "Helvetica",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 0,
+    // borderBottomWidth: 1,
+    // borderBottomColor: '#000',
+    paddingBottom: 5,
+  },
+  hospitalLogo: {
+    width: 40,
+    height: 40,
+  },
+  hospitalName: {
+    fontSize: 14,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  unit: {
+    fontSize: 8,
+    // fontWeight: 'normal',
+    textAlign: "center",
+  },
+  sectionHeader: {
+    fontSize: 12,
+    fontWeight: "bold",
+    marginBottom: 0,
+    marginTop: 0,
+  },
+  gridContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 15,
+    flexWrap: "wrap", // Prevent overflow
+  },
+  boldText: {
+    fontWeight: "bold",
+  },
+  footer: {
+    position: "absolute",
+    bottom: 10,
+    left: 40,
+    right: 40,
+    // top:65,
+    fontSize: 8,
+    // color: '#333', // Darker text color for better readability
+    textAlign: "center",
+    borderTopWidth: 1.5, // Increase border width for visibility
+    borderTopColor: "#888", // Darker border color
+    paddingTop: 5, // More padding for better spacing
+    marginTop: 20, // Increase margin to avoid overlap
+    width: "80%", // Ensure proper width
+    alignSelf: "center", // Center alignment
+  },
+
+ 
+  Insection: { marginBottom: 2, marginTop: 3 },
+  section: { marginBottom: 0 },
+  textContainer: { flexDirection: "row", flexWrap: "wrap" },
+  normalText: { fontSize: 9, lineHeight: 1.2 },
+  normalTextin: {
+    fontSize: 9,
+    flexShrink: 1, // Prevents overflowing and allows wrapping
+    flexWrap: "wrap", // Ensures text wraps within the available space
+    flex: 1, // Takes the remaining space while respecting wrapping }, // Ensures proper spacing
+  },
+  container: {
+    // flex: 1,
+    padding: 0,
+    marginBottom: 5,
+  },
+  patientrow: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: "black",
+  },
+  column: {
+    flex: 1,
+    padding: 1,
+  },
+  borderRight: {
+    borderRightWidth: 1,
+    borderRightColor: "black",
+  },
+  italicText: {
+    fontStyle: "italic",
+    fontSize: 8,
+  },
+  alignRight: {
+    textAlign: "left",
+  },
+  fontSizeaddress: {
+    fontSize: 8,
+  },
+    title: { fontSize: 13, marginBottom: 10, fontWeight: 'bold' },
+    heading: { fontSize: 12, marginBottom: 10, fontWeight: 'bold' },
+    subheading: { fontSize: 11, marginBottom: 8, fontWeight: 'bold' },
+    text: { fontSize: 9, marginBottom: 5 },
+    bold: { fontWeight: 'bold' },
+    listItem: { fontSize: 9, marginLeft: 10, marginBottom: 5 },
+});
+const calculateAge = (dateString) => {
+    if (!dateString) {
+      return "";
+    }
+  
+    let birthDate;
+    if (dateString.includes("-")) {
+      const parts = dateString.split("-").map(Number);
+      if (parts[0] > 1900) {
+        birthDate = new Date(parts[0], parts[1] - 1, parts[2]);
+      } else if (parts[0] > 12) {
+        birthDate = new Date(parts[2], parts[1] - 1, parts[0]);
+      } else {
+        birthDate = new Date(parts[2], parts[0] - 1, parts[1]);
+      }
+    } else {
+      return "";
+    }
+  
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    const dayDiff = today.getDate() - birthDate.getDate();
+  
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      age--;
+    }
+  
+    return age;
+  };
+const data = {
+  logo_left: "/headlogotemplate.png",
+  logo_Right: "/nabh (2).png",
+  hospitalName: "GUNAM SUPER SPECIALITY HOSPITAL",
+  unit: "A UNIT OF HOSUR SUPER SPECIALITY HOSPITALS PVT.LTD",
+  outpatientTitle: "OUTPATIENT DATA SHEET",
+  footer:
+    "435, Tank street, (Old survey NO:12012B2), Denkanikotta Road Krishnagiri(Dt), Hosur - 635109",
+  contact:
+    "Phone: 04344-220599; Email: info@gunamhospital.com; www.gunamhospital.com",
+};
+
+ 
+export const MyDocumentPDF = ({
+  markdownContent,
+  patient,
+  doctorDetails,
+  specialtyName,
+
+}) => (
+  <Document>
+    <Page size="A4" style={styles.page}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={{ width: "10%" }}>
+          <Image src={data?.logo_left} style={styles.hospitalLogo} />
+        </View>
+        <View style={{ width: "80%", fontSize: 12, alignItems: "center" }}>
+          <Text style={styles.hospitalName}>{data.hospitalName}</Text>
+          <Text style={styles.unit}>{data.unit}</Text>
+          <Text style={styles.sectionHeader}>{data.outpatientTitle}</Text>
+        </View>
+        <View style={{ width: "10%", alignItems: "flex-end" }}>
+          <Image src={data?.logo_Right} style={styles.hospitalLogo} />
+        </View>
+      </View>
+
+      {/* Patient Info */}
+      <View style={styles.container}>
+        {/* First Row */}
+        <View style={styles.patientrow}>
+          <View style={[styles.column, styles.borderRight]}>
+            <Text>
+              Registration Number:{" "}
+              <Text style={styles.boldText}>{patient?.patient_id}</Text>
+            </Text>
+            <Text style={styles.boldText}>
+              {patient?.first_name} {patient?.last_name}
+            </Text>
+            <Text style={styles.fontSizeaddress}>
+              {patient?.address1} {patient?.city ? `, ${patient?.city}` : ""}
+              {patient?.state ? `, ${patient?.state}` : ""}
+              {patient?.zip_code ? `- ${patient?.zip_code}` : ""}
+            </Text>
+          </View>
+
+          <View style={[styles.column, styles.borderRight]}>
+            <Text style={styles.alignRight}>
+              Date:{" "}
+              <Text style={styles.boldText}>{gettimezonebasedDate()}</Text>
+            </Text>
+            {(patient?.age || patient?.gender || patient?.date_of_birth) && (
+              <Text style={styles.alignRight}>
+                Age / Gender:{" "}
+                <Text style={styles.boldText}>
+                  {patient?.age || calculateAge(patient?.date_of_birth)} /{" "}
+                  {patient?.gender}
+                </Text>
+              </Text>
+            )}
+            {patient?.date_of_birth && (
+              <Text style={styles.alignRight}>
+                Date of Birth:{" "}
+                <Text style={styles.boldText}>{patient?.date_of_birth}</Text>
+              </Text>
+            )}
+            {patient?.phone_number !== "+" && (
+              <Text style={styles.alignRight}>
+                Mobile:{" "}
+                <Text style={styles.boldText}>{patient?.phone_number}</Text>
+              </Text>
+            )}
+          </View>
+
+          <View style={[styles.column, styles.borderRight]}>
+            <Text>
+              Doctor:{" "}
+              <Text style={styles.boldText}>
+                {doctorDetails?.salutation} {doctorDetails?.first_name}{" "}
+                {doctorDetails?.last_name}
+              </Text>
+            </Text>
+            <Text style={styles.italicText}>({specialtyName})</Text>
+            {doctorDetails?.license_no && (
+              <Text>
+                TNMC Reg No:{" "}
+                <Text style={styles.boldText}>{doctorDetails?.license_no}</Text>
+              </Text>
+            )}
+          </View>
+        </View>
+      </View>
+      <View>
+
+</View>
+{markdownContent.map((element, index) => { // Changed from 'elements' to 'markdownContent'
+          switch (element.type) {
+            case 'title':
+                return <Text key={index} style={styles.title}>{element.content}</Text>;
+            case 'heading':
+              return <Text key={index} style={styles.heading}>{element.content}</Text>;
+            case 'subheading':
+                return (
+                    <Text key={index} style={styles.text}>
+                      <Text style={styles.bold}>{element.label}:</Text> {element.value}
+                    </Text>
+                  );
+  
+
+              case 'listItem':
+                return (
+                  <Text key={index} style={styles.listItem}>
+                    •{' '}
+                    {element.parts.map((part, i) =>
+                      part.type === 'bold' ? (
+                        <Text key={i} style={styles.bold}>{part.content}</Text>
+                      ) : (
+                        <Text style={styles.listItem}>{part.content}</Text>
+                      )
+                    )}
+                  </Text>
+                );
+              
+            case 'text':
+              return (
+                <Text key={index} style={styles.text}>
+                  {element.parts.map((part, i) =>
+                    part.type === 'bold' ? (
+                      <Text key={i} style={styles.bold}>{part.content}</Text>
+                    ) : (
+                      part.content
+                    )
+                  )}
+                </Text>
+              );
+            default:
+              return null;
+          }
+        })}
+      {/* Footer */}
+      <View style={styles.footer} fixed>
+        <Text>{data.footer}</Text>
+        <Text>{data.contact}</Text>
+        <Text
+          style={{ textAlign: "right", flexGrow: 1 }}
+          render={({ pageNumber, totalPages }) =>
+            `Page ${pageNumber} of ${totalPages}`
+          }
+        />
+      </View>
+    </Page>
+  </Document>
+);
+
+
+const preprocessMarkdown = (markdown) => {
+    const lines = markdown.split('\n');
+    const elements = [];
+  
+    lines.forEach((line, index) => {
+      line = line.trim();
+      if (!line) return;
+  
+      // Heading level 3
+      if (line.startsWith('### ')) {
+        elements.push({
+          type: 'title',
+          content: line.replace('### ', ''),
+        });
+      }
+      // Heading level 2
+      else if (line.startsWith('## ')) {
+        elements.push({
+          type: 'heading',
+          content: line.replace('## ', ''),
+        });
+      }
+      else if (/^\*\*[^*]+:\*\*/.test(line)) {
+        const match = line.match(/^\*\*(.+?):\*\*(.*)/);
+        if (match) {
+          const [, label, value] = match;
+          elements.push({
+            type: 'subheading',
+            label: label.trim(),
+            value: value.trim(),
+          });
+        }
+      }
+      
+      
+      // List item
+      else if (line.startsWith('* ')) {
+        const listContent = line.slice(2).trim();
+  
+        // Check if it's a heading inside a list
+        if (listContent.startsWith('### ')) {
+          elements.push({
+            type: 'title',
+            content: listContent.replace('### ', ''),
+          });
+        } else if (listContent.startsWith('## ')) {
+          elements.push({
+            type: 'heading',
+            content: listContent.replace('## ', ''),
+          });
+        } else if (listContent.startsWith('**') && listContent.includes(':**')) {
+          const parts = listContent.split(/(\*\*.*?\*\*)/g).filter(Boolean);
+          const textParts = parts.map((part) =>
+            part.startsWith('**') && part.endsWith('**')
+              ? { type: 'bold', content: part.replace(/\*\*/g, '') }
+              : { type: 'text', content: part }
+          );
+          elements.push({ type: 'listItem', parts: textParts });
+          
+        } else {
+          // Parse bold parts within the list content
+          const parts = listContent.split(/(\*\*.*?\*\*)/g).filter(Boolean);
+          const textParts = parts.map((part) =>
+            part.startsWith('**') && part.endsWith('**')
+              ? { type: 'bold', content: part.replace(/\*\*/g, '') }
+              : { type: 'text', content: part }
+          );
+          elements.push({ type: 'listItem', parts: textParts });
+        }
+      }
+      // Plain text with optional bold
+      else {
+        const parts = line.split(/(\*\*.*?\*\*)/g).filter(Boolean);
+        const textParts = parts.map((part) =>
+          part.startsWith('**') && part.endsWith('**')
+            ? { type: 'bold', content: part.replace(/\*\*/g, '') }
+            : { type: 'text', content: part }
+        );
+        elements.push({ type: 'text', parts: textParts });
+      }
+    });
+  
+    return elements;
+  };
+const generatePDFBlob = async () => {
+    try {
+      if (!MyDocumentPDF) throw new Error("MyDocument component is missing!");
+      if (!markdownContent || !patient_details || !details || !specialtyName) {
+        throw new Error("Missing required data for PDF generation");
+      }
+  
+      const blob = await pdf(
+        <MyDocumentPDF
+          markdownContent={preprocessMarkdown(markdownContent)}
+          patient={patient_details}
+          doctorDetails={details}
+          specialtyName={specialtyName}
+        />
+      ).toBlob();
+  
+      return blob;
+    } catch (error) {
+      console.error("PDF Generation Error:", error);
+      return null;
+    }
+  };
+  const handlePrint = async () => {
+    const blobData = await generatePDFBlob();
+    const pdfUrl = URL.createObjectURL(blobData);
+    
+    // Create an invisible iframe
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none"; // Hide the iframe
+    document.body.appendChild(iframe); // Append to DOM
+    
+    iframe.src = pdfUrl;
+    
+    iframe.onload = () => {
+      iframe.contentWindow.focus(); // Ensure it's in focus
+      iframe.contentWindow.print(); // Automatically open the print dialog
+    }
+  };
+
