@@ -1,0 +1,110 @@
+import os
+import re
+from html import escape
+from dotenv import load_dotenv
+from telegram import Update
+from telegram.constants import ChatAction
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters
+)
+import google.generativeai as genai
+from collections import defaultdict, deque
+
+# === Load .env ===
+load_dotenv()
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# === Configure Gemini ===
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-1.5-flash')
+
+# === Create download folder ===
+DOWNLOAD_DIR = "downloads"
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+# === User-specific history (store last 5 turns) ===
+chat_history = defaultdict(lambda: deque(maxlen=5))
+
+# === Markdown to Telegram-safe HTML ===
+def markdown_to_telegram_html(text: str) -> str:
+    text = escape(text)
+    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+    text = re.sub(r'\*(.*?)\*', r'<i>\1</i>', text)
+    text = re.sub(r'__(.*?)__', r'<u>\1</u>', text)
+    text = re.sub(r'~~(.*?)~~', r'<s>\1</s>', text)
+    text = re.sub(r'`(.*?)`', r'<code>\1</code>', text)
+    text = re.sub(r'\[(.*?)\]\((.*?)\)', r'<a href="\2">\1</a>', text)
+    text = re.sub(r'(?m)^\* (.+)', r'• \1', text)
+    return text
+
+# === Handlers ===
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Hi! I'm Rajesh 🤖💡\nSend me text, images, or documents to get insights!")
+
+async def ai_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_message = update.message.text
+    user_id = update.effective_user.id
+
+    await update.message.chat.send_action(ChatAction.TYPING)
+
+    try:
+        # Prepare chat history + current message
+        history = chat_history[user_id]
+        messages = []
+
+        for msg in history:
+            if msg["role"] == "user":
+                messages.append({"role": "user", "parts": [msg["text"]]})
+            elif msg["role"] == "bot":
+                messages.append({"role": "model", "parts": [msg["text"]]})
+
+        messages.append({"role": "user", "parts": [user_message]})
+
+        # Generate response with history
+        response = model.generate_content(messages)
+        raw_reply = response.text or "🤖 No response generated."
+        html_reply = markdown_to_telegram_html(raw_reply)
+
+        # Save to history
+        chat_history[user_id].append({"role": "user", "text": user_message})
+        chat_history[user_id].append({"role": "bot", "text": raw_reply})
+
+    except Exception as e:
+        html_reply = f"<b>⚠️ Error:</b> {escape(str(e))}"
+
+    await update.message.reply_text(html_reply, parse_mode="HTML")
+
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.chat.send_action(ChatAction.TYPING)
+
+    photo = update.message.photo[-1]
+    file = await context.bot.get_file(photo.file_id)
+    file_path = os.path.join(DOWNLOAD_DIR, f"{photo.file_unique_id}.jpg")
+    await file.download_to_drive(file_path)
+
+    await update.message.reply_text("📸 Got your photo! (Processing not implemented yet)")
+
+async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.chat.send_action(ChatAction.TYPING)
+
+    doc = update.message.document
+    file = await context.bot.get_file(doc.file_id)
+    filename = f"{doc.file_unique_id}_{doc.file_name}"
+    file_path = os.path.join(DOWNLOAD_DIR, filename)
+    await file.download_to_drive(file_path)
+
+    await update.message.reply_text(f"📄 Got your file: {doc.file_name} (Processing not implemented yet)")
+
+# === Build and run app ===
+app = ApplicationBuilder().token(BOT_TOKEN).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai_reply))
+app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
+
+app.run_polling()
